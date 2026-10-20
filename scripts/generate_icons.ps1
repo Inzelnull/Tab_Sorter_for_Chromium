@@ -1,3 +1,14 @@
+<#
+.SYNOPSIS
+    Tab Sorter 拡張機能用アイコン自動生成スクリプト
+
+.DESCRIPTION
+    Windows 標準の .NET System.Drawing ライブラリを使用して、
+    16x16, 32x32, 48x48, 128x128 の各解像度のPNGアイコンをプログラムで生成します。
+    外部ツール（PhotoshopやIllustrator等）がなくても、本スクリプトを実行するだけで
+    高品質なアンチエイリアス処理済みアイコンが生成されます。
+#>
+
 Add-Type -ReferencedAssemblies System.Drawing -TypeDefinition @"
 using System;
 using System.Drawing;
@@ -5,8 +16,14 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
 
+/// <summary>
+/// 高解像度ベクター描画によるアプリアイコン生成クラス
+/// </summary>
 public class IconGenerator
 {
+    /// <summary>
+    /// 角丸長方形の描画パスを生成します
+    /// </summary>
     private static GraphicsPath CreateRoundedRectangle(float x, float y, float width, float height, float radius)
     {
         GraphicsPath path = new GraphicsPath();
@@ -19,19 +36,26 @@ public class IconGenerator
         return path;
     }
 
+    /// <summary>
+    /// 指定されたサイズと出力パスにアイコンPNGを生成・保存します
+    /// </summary>
+    /// <param name="size">アイコンの一辺のピクセル数 (16, 32, 48, 128)</param>
+    /// <param name="outputPath">保存先ファイルパス</param>
     public static void Generate(int size, string outputPath)
     {
         using (Bitmap bmp = new Bitmap(size, size, PixelFormat.Format32bppArgb))
         using (Graphics g = Graphics.FromImage(bmp))
         {
+            // 高品質アンチエイリアス設定
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.InterpolationMode = InterpolationMode.HighQualityBicubic;
             g.PixelOffsetMode = PixelOffsetMode.HighQuality;
             g.Clear(Color.Transparent);
 
+            // 128px 基準のスケーリング係数
             float s = size / 128.0f;
 
-            // 背景コンテナ (角丸ダークインディゴ)
+            // 1. 背景コンテナ (角丸ダークインディゴのカード)
             float bgMargin = 6.0f * s;
             float bgSize = 116.0f * s;
             float bgRadius = 24.0f * s;
@@ -49,7 +73,7 @@ public class IconGenerator
                 }
             }
 
-            // 上タブ (Tab 1)
+            // 2. 上タブ (Tab 1: インディゴ)
             float tab1X = 16.0f * s;
             float tab1Y = 22.0f * s;
             float tabW = 56.0f * s;
@@ -65,7 +89,7 @@ public class IconGenerator
                 g.FillPath(tab1Brush, tab1Path);
             }
 
-            // 上タブ内テキストバーとファビコン
+            // 上タブ内のファビコン丸アイコンとテキストプレースホルダー
             using (Brush dotBrush = new SolidBrush(Color.FromArgb(255, 199, 210, 254)))
             {
                 g.FillEllipse(dotBrush, tab1X + 8.0f * s, tab1Y + 12.0f * s, 10.0f * s, 10.0f * s);
@@ -76,7 +100,7 @@ public class IconGenerator
                 g.FillPath(barBrush, bar1Path);
             }
 
-            // 下タブ (Tab 2)
+            // 3. 下タブ (Tab 2: スカイブルー)
             float tab2X = 16.0f * s;
             float tab2Y = 72.0f * s;
             using (GraphicsPath tab2Path = CreateRoundedRectangle(tab2X, tab2Y, tabW, tabH, tabR))
@@ -89,7 +113,7 @@ public class IconGenerator
                 g.FillPath(tab2Brush, tab2Path);
             }
 
-            // 下タブ内テキストバーとファビコン
+            // 下タブ内のファビコン丸アイコンとテキストプレースホルダー
             using (Brush dotBrush2 = new SolidBrush(Color.FromArgb(255, 186, 230, 253)))
             {
                 g.FillEllipse(dotBrush2, tab2X + 8.0f * s, tab2Y + 12.0f * s, 10.0f * s, 10.0f * s);
@@ -100,11 +124,11 @@ public class IconGenerator
                 g.FillPath(barBrush2, bar2Path);
             }
 
-            // ソート・入れ替え矢印 (右側)
+            // 4. ソート・順序入れ替えを示す矢印アイコン (右側)
             float penWidth = Math.Max(2.0f, 6.5f * s);
             float headSize = 8.5f * s;
 
-            // 1. 上向き矢印 (エメラルドグリーン)
+            // (A) 上向き矢印 (昇順ソート / エメラルドグリーン)
             float arrow1X = 87.0f * s;
             float arrow1Top = 26.0f * s;
             float arrow1Bottom = 68.0f * s;
@@ -114,14 +138,14 @@ public class IconGenerator
                 arrow1Pen.EndCap = LineCap.Round;
                 arrow1Pen.LineJoin = LineJoin.Round;
 
-                // 縦の軸
+                // 縦の直線
                 g.DrawLine(arrow1Pen, arrow1X, arrow1Bottom, arrow1X, arrow1Top);
                 // 矢じり
                 g.DrawLine(arrow1Pen, arrow1X, arrow1Top, arrow1X - headSize, arrow1Top + headSize);
                 g.DrawLine(arrow1Pen, arrow1X, arrow1Top, arrow1X + headSize, arrow1Top + headSize);
             }
 
-            // 2. 下向き矢印 (アンバーオレンジ)
+            // (B) 下向き矢印 (降順ソート / アンバーオレンジ)
             float arrow2X = 107.0f * s;
             float arrow2Top = 60.0f * s;
             float arrow2Bottom = 102.0f * s;
@@ -131,24 +155,27 @@ public class IconGenerator
                 arrow2Pen.EndCap = LineCap.Round;
                 arrow2Pen.LineJoin = LineJoin.Round;
 
-                // 縦の軸
+                // 縦の直線
                 g.DrawLine(arrow2Pen, arrow2X, arrow2Top, arrow2X, arrow2Bottom);
                 // 矢じり
                 g.DrawLine(arrow2Pen, arrow2X, arrow2Bottom, arrow2X - headSize, arrow2Bottom - headSize);
                 g.DrawLine(arrow2Pen, arrow2X, arrow2Bottom, arrow2X + headSize, arrow2Bottom - headSize);
             }
 
+            // PNG形式で保存
             bmp.Save(outputPath, ImageFormat.Png);
         }
     }
 }
 "@
 
+# 生成するアイコンのサイズ配列
 $sizes = @(16, 32, 48, 128)
-$iconsDir = "d:\My Documents\Antigravity\Tab_Sorter\icons"
+$iconsDir = Join-Path $PSScriptRoot "..\icons"
 
+# 各解像度のアイコンを生成
 foreach ($size in $sizes) {
     $outPath = Join-Path $iconsDir "icon$size.png"
     [IconGenerator]::Generate($size, $outPath)
-    Write-Output "Successfully generated: $outPath ($size x $size)"
+    Write-Output "アイコン生成完了: $outPath ($size x $size)"
 }

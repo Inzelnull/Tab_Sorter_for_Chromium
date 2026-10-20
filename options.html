@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tab Sorter 設定</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- ヘッダーエリア -->
+    <header class="app-header">
+      <div class="header-left">
+        <img src="icons/icon48.png" alt="Tab Sorter Icon" class="app-logo">
+        <div>
+          <h1 class="app-title">Tab Sorter 設定</h1>
+          <p class="app-subtitle">タブとタブグループの整然とした並び替え・ショートカット設定</p>
+        </div>
+      </div>
+      <div class="header-badge">v1.1.0</div>
+    </header>
+
+    <main class="main-content">
+      <!-- セクション 1: キーボードショートカット設定 -->
+      <section class="card">
+        <div class="card-header">
+          <div class="card-icon">⌨️</div>
+          <div>
+            <h2 class="card-title">キーボードショートカット</h2>
+            <p class="card-desc">マウスを使わずにキーボード操作だけで瞬時にタブをソートできます。</p>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <!-- 動的に取得されたショートカット一覧がここにレンダリングされます -->
+          <div id="shortcutsList" class="shortcuts-list">
+            <div class="loading-placeholder">ショートカット情報を読み込み中...</div>
+          </div>
+
+          <!-- ショートカット変更ボタンと案内 -->
+          <div class="shortcut-actions-box">
+            <div class="action-info">
+              <span class="info-icon">💡</span>
+              <div>
+                <strong>ショートカットの変更方法:</strong>
+                <p>ブラウザのショートカット設定画面から、お好みのキーの組み合わせにいつでも自由に変更できます。</p>
+              </div>
+            </div>
+            <div class="btn-group">
+              <button id="btnOpenShortcuts" class="btn btn-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                ショートカット設定画面を開く
+              </button>
+              <button id="btnCopyShortcutsUrl" class="btn btn-secondary" title="URLをクリップボードにコピー">
+                URLをコピー
+              </button>
+            </div>
+          </div>
+
+          <!-- 手動案内の折りたたみ -->
+          <details class="guide-details">
+            <summary>もし上のボタンで設定画面が開かない場合の手順</summary>
+            <ol class="step-list">
+              <li>ブラウザの新しいタブを開きます。</li>
+              <li>アドレスバーに <code id="shortcutsUrlText">chrome://extensions/shortcuts</code> と入力して Enter を押します。</li>
+              <li>一覧から <strong>「Tab Sorter」</strong> を探し、鉛筆アイコンをクリックしてお好みのキーを入力します。</li>
+            </ol>
+          </details>
+        </div>
+      </section>
+
+      <!-- セクション 2: 基本ソート動作の設定 -->
+      <section class="card">
+        <div class="card-header">
+          <div class="card-icon">⚙️</div>
+          <div>
+            <h2 class="card-title">動作設定</h2>
+            <p class="card-desc">ツールバーアイコンのクリック時や、ソートの挙動をカスタマイズします。</p>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <!-- 設定項目 1: アイコンクリック時のソート基準 -->
+          <div class="setting-item">
+            <div class="setting-text">
+              <label for="defaultSortBy" class="setting-label">アイコンクリック時のソート基準</label>
+              <p class="setting-hint">拡張機能のアイコンを左クリックした際に実行されるソート対象を選択します。</p>
+            </div>
+            <div class="setting-control">
+              <select id="defaultSortBy" class="select-input">
+                <option value="title">タイトル順 (A → Z)</option>
+                <option value="url">URL順 (ドメイン・パス)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 設定項目 2: アイコンクリック時のソート順 -->
+          <div class="setting-item">
+            <div class="setting-text">
+              <label for="defaultDescending" class="setting-label">アイコンクリック時のソート方向</label>
+              <p class="setting-hint">昇順（通常）または降順のどちらで並び替えるかを指定します。</p>
+            </div>
+            <div class="setting-control">
+              <select id="defaultDescending" class="select-input">
+                <option value="false">昇順 (A → Z, 1 → 9)</option>
+                <option value="true">降順 (Z → A, 9 → 1)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 設定項目 3: URLソートの方式 -->
+          <div class="setting-item">
+            <div class="setting-text">
+              <label for="urlSortMode" class="setting-label">URLソートの比較方式</label>
+              <p class="setting-hint">
+                <strong>ドメイン優先（推奨）:</strong> 同じWebサイトのタブが隣同士にまとまり、その中でパス順に並びます。<br>
+                <strong>完全URL比較:</strong> http/https を含むURL文字列全体で比較します。
+              </p>
+            </div>
+            <div class="setting-control">
+              <select id="urlSortMode" class="select-input">
+                <option value="domain">ドメイン優先（推奨・サイトごとに整理）</option>
+                <option value="full">完全URL比較（文字列全体）</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- セクション 3: 使い方リファレンス -->
+      <section class="card">
+        <div class="card-header">
+          <div class="card-icon">📖</div>
+          <div>
+            <h2 class="card-title">操作リファレンス</h2>
+            <p class="card-desc">様々な方法でタブを快適に並び替えることができます。</p>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="reference-grid">
+            <div class="ref-card">
+              <div class="ref-badge">マウス左クリック</div>
+              <h3>アイコンを左クリック</h3>
+              <p>設定したデフォルトのソート（通常はタイトル昇順）を瞬時に実行します。</p>
+            </div>
+            <div class="ref-card">
+              <div class="ref-badge">マウス右クリック</div>
+              <h3>アイコンを右クリック</h3>
+              <p>メニューから「タイトル昇順」「タイトル降順」「URL昇順」「URL降順」をいつでも直接選べます。</p>
+            </div>
+            <div class="ref-card">
+              <div class="ref-badge">キーボード</div>
+              <h3>ショートカットキー</h3>
+              <p>Webブラウジング中にショートカットキーを押すだけで、現在開いているウィンドウのタブを一瞬でソートします。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- フッター -->
+    <footer class="app-footer">
+      <p>Tab Sorter &bull; 自然順・全角英数・タブグループ完全対応</p>
+    </footer>
+
+    <!-- 保存完了トースト通知 -->
+    <div id="toast" class="toast">
+      <span class="toast-icon">✓</span>
+      <span class="toast-message">設定を保存しました</span>
+    </div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

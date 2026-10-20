@@ -1,0 +1,516 @@
+/**
+ * Tab Sorter - オプション設定画面スタイルシート
+ * 
+ * デザインコンセプト:
+ * - 視認性と清潔感に優れたモダンなカード型レイアウト
+ * - 立体感のある美しいキートップ (<kbd>) スタイル
+ * - 直感的で操作しやすいセレクトボックスと押し心地の良いボタン
+ * - ダークモード自動追従（OSの配色設定に自然に適応）
+ */
+
+:root {
+  /* ライトモード用カラーパレット */
+  --bg-primary: #F8FAFC;
+  --bg-card: #FFFFFF;
+  --bg-subtle: #F1F5F9;
+  --bg-hover: #E2E8F0;
+  
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
+  
+  --border-color: #E2E8F0;
+  --border-focus: #6366F1;
+  
+  --primary-color: #4F46E5;
+  --primary-hover: #4338CA;
+  --primary-text: #FFFFFF;
+  
+  --accent-badge: #EEF2FF;
+  --accent-badge-text: #4338CA;
+
+  --kbd-bg: #FFFFFF;
+  --kbd-border: #CBD5E1;
+  --kbd-shadow: #94A3B8;
+
+  --success-color: #10B981;
+  --radius-lg: 14px;
+  --radius-md: 10px;
+  --radius-sm: 6px;
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+}
+
+/* OSがダークテーマの場合に自動適用 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #0F172A;
+    --bg-card: #1E293B;
+    --bg-subtle: #334155;
+    --bg-hover: #475569;
+    
+    --text-primary: #F8FAFC;
+    --text-secondary: #CBD5E1;
+    --text-muted: #94A3B8;
+    
+    --border-color: #334155;
+    --border-focus: #818CF8;
+    
+    --primary-color: #6366F1;
+    --primary-hover: #4F46E5;
+    --primary-text: #FFFFFF;
+    
+    --accent-badge: #312E81;
+    --accent-badge-text: #E0E7FF;
+
+    --kbd-bg: #1E293B;
+    --kbd-border: #475569;
+    --kbd-shadow: #0F172A;
+
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* 基本リセット & タイポグラフィ */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  padding: 24px 16px;
+  min-height: 100vh;
+}
+
+.app-container {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+/* =============================================================================
+   ヘッダー
+   ============================================================================= */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.app-logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.app-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.app-subtitle {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.header-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background-color: var(--accent-badge);
+  color: var(--accent-badge-text);
+}
+
+/* =============================================================================
+   カードコンポーネント
+   ============================================================================= */
+.main-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 24px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.card-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+  padding: 8px;
+  background-color: var(--bg-subtle);
+  border-radius: var(--radius-md);
+}
+
+.card-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.card-desc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* =============================================================================
+   ショートカット一覧 & キートップ UI
+   ============================================================================= */
+.shortcuts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background-color: var(--bg-subtle);
+  border-radius: var(--radius-md);
+  gap: 16px;
+}
+
+.shortcut-name {
+  font-size: 0.925rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.shortcut-keys {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* 立体的なキーボード風デザイン (<kbd>) */
+kbd {
+  display: inline-block;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--text-primary);
+  background-color: var(--kbd-bg);
+  border: 1px solid var(--kbd-border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 2px 0 var(--kbd-shadow);
+  user-select: none;
+}
+
+.key-separator {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  margin: 0 2px;
+}
+
+.key-none {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ショートカット設定導線ボックス */
+.shortcut-actions-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  background-color: var(--accent-badge);
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+}
+
+.action-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1;
+  min-width: 260px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.action-info p {
+  margin-top: 2px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.info-icon {
+  font-size: 1.2rem;
+}
+
+.btn-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ボタン */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  color: var(--primary-text);
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  background-color: var(--bg-hover);
+}
+
+/* 詳細ガイド */
+.guide-details {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.guide-details summary {
+  cursor: pointer;
+  color: var(--primary-color);
+  font-weight: 500;
+  padding: 4px 0;
+}
+
+.guide-details summary:hover {
+  text-decoration: underline;
+}
+
+.step-list {
+  margin: 10px 0 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text-secondary);
+}
+
+.step-list code {
+  background-color: var(--bg-subtle);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.85rem;
+}
+
+/* =============================================================================
+   設定項目フォーム
+   ============================================================================= */
+.setting-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.setting-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.setting-text {
+  flex: 1;
+}
+
+.setting-label {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.setting-hint {
+  font-size: 0.825rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.setting-control {
+  flex-shrink: 0;
+}
+
+.select-input {
+  appearance: none;
+  background-color: var(--bg-subtle);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 10px 36px 10px 14px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.select-input:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+/* =============================================================================
+   リファレンスグリッド
+   ============================================================================= */
+.reference-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.ref-card {
+  padding: 16px;
+  background-color: var(--bg-subtle);
+  border-radius: var(--radius-md);
+}
+
+.ref-badge {
+  display: inline-block;
+  font-size: 0.725rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background-color: var(--bg-card);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  margin-bottom: 8px;
+}
+
+.ref-card h3 {
+  font-size: 0.925rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.ref-card p {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* =============================================================================
+   フッター
+   ============================================================================= */
+.app-footer {
+  text-align: center;
+  margin-top: 32px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* =============================================================================
+   トースト通知
+   ============================================================================= */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--success-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  opacity: 0;
+  transform: translateY(12px);
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 9999;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.toast-icon {
+  color: var(--success-color);
+  font-weight: bold;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 600px) {
+  .setting-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .setting-control {
+    width: 100%;
+  }
+  .select-input {
+    width: 100%;
+  }
+  .shortcut-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}

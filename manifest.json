@@ -1,15 +1,16 @@
 {
   "manifest_version": 3,
   "name": "Tab Sorter",
-  "version": "1.0.0",
-  "description": "タブとタブグループを自然順・全角英数対応で整然とソートする拡張機能。クリックで昇順、右クリックで降順。",
+  "version": "1.1.0",
+  "description": "タブとタブグループをタイトルまたはURLで自然順・全角英数対応で整然とソートする拡張機能。ショートカットキー・オプション設定対応。",
   "permissions": [
     "tabs",
     "tabGroups",
-    "contextMenus"
+    "contextMenus",
+    "storage"
   ],
   "action": {
-    "default_title": "タブを昇順でソート（右クリックで降順）",
+    "default_title": "タブをソート（右クリックでメニュー・オプション）",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",
@@ -19,6 +20,40 @@
   },
   "background": {
     "service_worker": "background.js"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "commands": {
+    "sort_title_asc": {
+      "suggested_key": {
+        "default": "Alt+Shift+S",
+        "mac": "Alt+Shift+S"
+      },
+      "description": "タブを昇順ソート（タイトル順）"
+    },
+    "sort_title_desc": {
+      "suggested_key": {
+        "default": "Alt+Shift+D",
+        "mac": "Alt+Shift+D"
+      },
+      "description": "タブを降順ソート（タイトル順）"
+    },
+    "sort_url_asc": {
+      "suggested_key": {
+        "default": "Alt+Shift+U",
+        "mac": "Alt+Shift+U"
+      },
+      "description": "タブを昇順ソート（URL順）"
+    },
+    "sort_url_desc": {
+      "suggested_key": {
+        "default": "Alt+Shift+J",
+        "mac": "Alt+Shift+J"
+      },
+      "description": "タブを降順ソート（URL順）"
+    }
   },
   "icons": {
     "16": "icons/icon16.png",

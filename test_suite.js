@@ -1,44 +1,178 @@
+/**
+ * Tab Sorter - 総合テストスイート (test_suite.js)
+ * 
+ * 【検証内容】
+ * Test 1: 自然順ソート（1, 2, 10 等）および全角英数字の正規化比較テスト
+ * Test 2: URLソートの検証（ドメイン階層優先、パスの自然順、タイブレーク）
+ * Test 3: タブグループの所属維持・グループ内ソート・ウィンドウ末尾配置の検証
+ * 
+ * 実行方法:
+ *   node test_suite.js
+ */
+
 const assert = require('assert');
 
-// Collator & Normalizer
-const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+// =============================================================================
+// テスト対象のソートロジック（background.js と同等の実装）
+// =============================================================================
+
+// 自然順比較用 Collator
+const collator = new Intl.Collator(undefined, {
+  numeric: true,
+  sensitivity: 'base'
+});
+
+/**
+ * 比較用に文字列を正規化（全角英数半角化・トリム）
+ */
 function normalizeForComparison(str) {
   if (typeof str !== 'string') return '';
   return str.normalize('NFKC').trim();
 }
+
+/**
+ * 文字列の自然順・全角対応比較
+ */
 function compareStrings(a, b, descending = false) {
   const normA = normalizeForComparison(a);
   const normB = normalizeForComparison(b);
   let res = collator.compare(normA, normB);
-  if (res === 0) res = (a || '').localeCompare(b || '', undefined, { numeric: true });
+
+  // 正規化後に同等の場合のタイブレーク
+  if (res === 0) {
+    res = (a || '').localeCompare(b || '', undefined, { numeric: true });
+  }
+
   return descending ? -res : res;
 }
-function compareTabs(tabA, tabB, descending = false) {
-  let res = compareStrings(tabA.title, tabB.title, descending);
-  if (res === 0) res = compareStrings(tabA.url, tabB.url, descending);
-  if (res === 0) res = descending ? (tabB.id - tabA.id) : (tabA.id - tabB.id);
+
+/**
+ * URL文字列をパースして比較用パーツを抽出
+ */
+function parseUrlForSort(urlStr) {
+  if (!urlStr || typeof urlStr !== 'string') {
+    return { host: '', path: '', raw: '' };
+  }
+  try {
+    const parsed = new URL(urlStr);
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
+    const path = parsed.pathname + parsed.search + parsed.hash;
+    return { host, path, raw: urlStr };
+  } catch {
+    return { host: '', path: '', raw: urlStr };
+  }
+}
+
+/**
+ * タブ比較関数（タイトル順 / URL順）
+ */
+function compareTabs(tabA, tabB, sortBy = 'title', descending = false, urlSortMode = 'domain') {
+  let res = 0;
+
+  if (sortBy === 'url') {
+    if (urlSortMode === 'domain') {
+      const infoA = parseUrlForSort(tabA.url);
+      const infoB = parseUrlForSort(tabB.url);
+
+      // 1. ホスト名で自然順比較
+      res = compareStrings(infoA.host, infoB.host, descending);
+
+      // 2. ホスト名が同一の場合はパスで比較
+      if (res === 0) {
+        res = compareStrings(infoA.path, infoB.path, descending);
+      }
+
+      // 3. パスも同一なら完全URLで比較
+      if (res === 0) {
+        res = compareStrings(infoA.raw, infoB.raw, descending);
+      }
+    } else {
+      res = compareStrings(tabA.url, tabB.url, descending);
+    }
+
+    // 4. URLが同一ならタイトルでタイブレーク
+    if (res === 0) {
+      res = compareStrings(tabA.title, tabB.title, descending);
+    }
+  } else {
+    // タイトル優先
+    res = compareStrings(tabA.title, tabB.title, descending);
+    if (res === 0) {
+      res = compareStrings(tabA.url, tabB.url, descending);
+    }
+  }
+
+  // 最終タイブレーク: タブID
+  if (res === 0) {
+    const idA = tabA.id || 0;
+    const idB = tabB.id || 0;
+    res = descending ? (idB - idA) : (idA - idB);
+  }
+
   return res;
 }
+
+/**
+ * タブグループ比較関数
+ */
 function compareGroups(groupA, groupB, descending = false) {
   let res = compareStrings(groupA.title, groupB.title, descending);
-  if (res === 0) res = descending ? (groupB.id - groupA.id) : (groupA.id - groupB.id);
+  if (res === 0) {
+    res = descending ? (groupB.id - groupA.id) : (groupA.id - groupB.id);
+  }
   return res;
 }
+
+// =============================================================================
+// テスト実行
+// =============================================================================
 
 console.log('--- Test 1: 自然順ソート（1, 2, 10）および全角数字のテスト ---');
 {
   const input = ['タブ10', 'タブ2', 'タブ1', 'タブ２０', 'タブ１', 'タブ２'];
   const asc = [...input].sort((a, b) => compareStrings(a, b, false));
+  
+  // 自然順かつ全角正規化により、タブ1/タブ１ -> タブ2/タブ２ -> タブ10 -> タブ20 の順
   assert.strictEqual(normalizeForComparison(asc[0]), 'タブ1');
   assert.strictEqual(normalizeForComparison(asc[1]), 'タブ1');
   assert.strictEqual(normalizeForComparison(asc[2]), 'タブ2');
   assert.strictEqual(normalizeForComparison(asc[3]), 'タブ2');
   assert.strictEqual(normalizeForComparison(asc[4]), 'タブ10');
   assert.strictEqual(normalizeForComparison(asc[5]), 'タブ20');
-  console.log('✓ Test 1 Passed');
+  console.log('✓ Test 1 Passed: 自然順および全角文字が正しくソートされました');
 }
 
-console.log('--- Test 2: タブグループの中身と配置の完全検証 ---');
+console.log('\n--- Test 2: URLソート機能のテスト（ドメイン優先 & パスの自然順） ---');
+{
+  const testTabs = [
+    { id: 1, title: 'GitHub Repo 10', url: 'https://github.com/user/repo10' },
+    { id: 2, title: 'GitHub Repo 2', url: 'https://github.com/user/repo2' },
+    { id: 3, title: 'Amazon Top', url: 'https://www.amazon.co.jp/' },
+    { id: 4, title: 'Google Search', url: 'https://google.com/search?q=test' },
+    { id: 5, title: 'Google About', url: 'https://google.com/about' },
+    { id: 6, title: 'Amazon Item', url: 'https://amazon.co.jp/dp/B000' }
+  ];
+
+  // URL昇順ソートの実行
+  const sorted = [...testTabs].sort((a, b) => compareTabs(a, b, 'url', false, 'domain'));
+
+  // ドメイン順: amazon.co.jp (www.除去で統一) -> github.com -> google.com
+  // 1 & 2: amazon.co.jp (/dp/B000 -> /)
+  assert.strictEqual(parseUrlForSort(sorted[0].url).host, 'amazon.co.jp');
+  assert.strictEqual(parseUrlForSort(sorted[1].url).host, 'amazon.co.jp');
+
+  // 3 & 4: github.com (パスの自然順: repo2 -> repo10)
+  assert.strictEqual(sorted[2].url, 'https://github.com/user/repo2');
+  assert.strictEqual(sorted[3].url, 'https://github.com/user/repo10');
+
+  // 5 & 6: google.com (/about -> /search)
+  assert.strictEqual(sorted[4].url, 'https://google.com/about');
+  assert.strictEqual(sorted[5].url, 'https://google.com/search?q=test');
+
+  console.log('✓ Test 2 Passed: ドメイン優先かつパスの自然順でURLが正しくソートされました');
+}
+
+console.log('\n--- Test 3: タブグループの中身と配置の完全検証 ---');
 {
   // 仮想タブストリップ
   let tabs = [
@@ -70,7 +204,7 @@ console.log('--- Test 2: タブグループの中身と配置の完全検証 ---
   }
 
   // 昇順シミュレーション実行
-  const ungrouped = tabs.filter(t => t.groupId < 0).sort((a, b) => compareTabs(a, b, false));
+  const ungrouped = tabs.filter(t => t.groupId < 0).sort((a, b) => compareTabs(a, b, 'title', false));
   ungrouped.forEach((t, i) => moveTab(t.id, i));
 
   const sortedG = [...groups].sort((a, b) => compareGroups(a, b, false));
@@ -78,7 +212,7 @@ console.log('--- Test 2: タブグループの中身と配置の完全検証 ---
     moveGroupToEnd(g.id);
   }
   for (const g of sortedG) {
-    const gTabs = tabs.filter(t => t.groupId === g.id).sort((a, b) => compareTabs(a, b, false));
+    const gTabs = tabs.filter(t => t.groupId === g.id).sort((a, b) => compareTabs(a, b, 'title', false));
     let tIdx = Math.min(...gTabs.map(t => t.index));
     for (const t of gTabs) {
       moveTab(t.id, tIdx);
@@ -93,7 +227,7 @@ console.log('--- Test 2: タブグループの中身と配置の完全検証 ---
   assert.strictEqual(tabs[3].title, 'グループA-タブ2');
   assert.strictEqual(tabs[4].title, 'グループB-タブ2');
   assert.strictEqual(tabs[5].title, 'グループB-タブ10');
-  console.log('✓ Test 2 Passed');
+  console.log('✓ Test 3 Passed: グループ外タブのソートおよびグループ末尾配置・グループ内ソートが正常に動作');
 }
 
 console.log('\n=============================');
