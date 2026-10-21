@@ -1,5 +1,5 @@
 /**
- * Tab Sorter - Chrome & Edge Extension
+ * Tab Sorter for Chromium - Chrome & Edge Extension
  * バックグラウンド・サービスクーカー (Service Worker)
  * 
  * 【主な機能】
@@ -29,8 +29,8 @@ const collator = new Intl.Collator(undefined, {
  * 拡張機能のデフォルト設定値
  */
 const DEFAULT_SETTINGS = {
-  // アイコンクリック時のソート基準: 'title' (タイトル順) または 'url' (URL順)
-  defaultSortBy: 'title',
+  // アイコンクリック時のソート基準: 'url' (URL順) または 'title' (タイトル順)
+  defaultSortBy: 'url',
   // アイコンクリック時の並び順: false (昇順), true (降順)
   defaultDescending: false,
   // URLソート時の方式: 'domain' (ドメイン優先・サイトごとにまとめる), 'full' (URL全体直接比較)
@@ -422,7 +422,7 @@ function showBadgeFeedback(sortBy, descending) {
 chrome.action.onClicked.addListener(async () => {
   const settings = await getSettings();
   await sortTabsInCurrentWindow({
-    sortBy: settings.defaultSortBy || 'title',
+    sortBy: settings.defaultSortBy || 'url',
     descending: !!settings.defaultDescending
   });
 });

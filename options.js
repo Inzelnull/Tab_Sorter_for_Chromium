@@ -1,5 +1,5 @@
 /**
- * Tab Sorter - オプション設定スクリプト (options.js)
+ * Tab Sorter for Chromium - オプション設定スクリプト (options.js)
  * 
  * 【主な役割】
  * 1. 登録されているキーボードショートカット一覧の動的取得・画面描画 (chrome.commands.getAll)
@@ -16,7 +16,7 @@
  * 拡張機能のデフォルト設定
  */
 const DEFAULT_SETTINGS = {
-  defaultSortBy: 'title',       // 'title' または 'url'
+  defaultSortBy: 'url',         // 'url' または 'title'
   defaultDescending: 'false',   // 'false' (昇順) または 'true' (降順) ※select要素の値として文字列
   urlSortMode: 'domain'         // 'domain' (ドメイン優先) または 'full' (完全URL)
 };

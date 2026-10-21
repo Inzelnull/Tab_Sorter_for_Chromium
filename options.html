@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tab Sorter 設定</title>
+  <title>Tab Sorter for Chromium 設定</title>
   <link rel="stylesheet" href="options.css">
 </head>
 <body>
@@ -13,7 +13,7 @@
       <div class="header-left">
         <img src="icons/icon48.png" alt="Tab Sorter Icon" class="app-logo">
         <div>
-          <h1 class="app-title">Tab Sorter 設定</h1>
+          <h1 class="app-title">Tab Sorter for Chromium 設定</h1>
           <p class="app-subtitle">タブとタブグループの整然とした並び替え・ショートカット設定</p>
         </div>
       </div>
@@ -63,7 +63,7 @@
             <ol class="step-list">
               <li>ブラウザの新しいタブを開きます。</li>
               <li>アドレスバーに <code id="shortcutsUrlText">chrome://extensions/shortcuts</code> と入力して Enter を押します。</li>
-              <li>一覧から <strong>「Tab Sorter」</strong> を探し、鉛筆アイコンをクリックしてお好みのキーを入力します。</li>
+              <li>一覧から <strong>「Tab Sorter for Chromium」</strong> を探し、鉛筆アイコンをクリックしてお好みのキーを入力します。</li>
             </ol>
           </details>
         </div>
@@ -88,8 +88,8 @@
             </div>
             <div class="setting-control">
               <select id="defaultSortBy" class="select-input">
+                <option value="url" selected>URL順 (ドメイン・パス)</option>
                 <option value="title">タイトル順 (A → Z)</option>
-                <option value="url">URL順 (ドメイン・パス)</option>
               </select>
             </div>
           </div>
@@ -142,7 +142,7 @@
             <div class="ref-card">
               <div class="ref-badge">マウス左クリック</div>
               <h3>アイコンを左クリック</h3>
-              <p>設定したデフォルトのソート（通常はタイトル昇順）を瞬時に実行します。</p>
+              <p>設定したデフォルトのソート（通常はURL昇順）を瞬時に実行します。</p>
             </div>
             <div class="ref-card">
               <div class="ref-badge">マウス右クリック</div>
@@ -161,7 +161,7 @@
 
     <!-- フッター -->
     <footer class="app-footer">
-      <p>Tab Sorter &bull; 自然順・全角英数・タブグループ完全対応</p>
+      <p>Tab Sorter for Chromium &bull; 自然順・全角英数・タブグループ完全対応</p>
     </footer>
 
     <!-- 保存完了トースト通知 -->

@@ -1,45 +1,41 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
   <defs>
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#1E1B4B"/>
-      <stop offset="100%" stop-color="#0F172A"/>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F8FAFC"/>
     </linearGradient>
     <linearGradient id="tabGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#6366F1"/>
-      <stop offset="100%" stop-color="#4F46E5"/>
+      <stop offset="100%" stop-color="#4338CA"/>
     </linearGradient>
     <linearGradient id="tabGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#38BDF8"/>
-      <stop offset="100%" stop-color="#0EA5E9"/>
+      <stop offset="0%" stop-color="#0EA5E9"/>
+      <stop offset="100%" stop-color="#0369A1"/>
     </linearGradient>
-    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000000" flood-opacity="0.3"/>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000000" flood-opacity="0.12"/>
     </filter>
   </defs>
 
-  <!-- 背景ベース -->
-  <rect x="6" y="6" width="116" height="116" rx="24" fill="url(#bgGrad)" stroke="#6366F1" stroke-width="2" stroke-opacity="0.35" filter="url(#shadow)"/>
+  <!-- 白基調ベースカード -->
+  <rect x="6" y="6" width="116" height="116" rx="24" fill="url(#bgGrad)" stroke="#CBD5E1" stroke-width="2" filter="url(#shadow)"/>
 
-  <!-- 上タブ (Tab 1) -->
-  <rect x="16" y="22" width="56" height="34" rx="7" fill="url(#tabGrad1)"/>
-  <circle cx="25" cy="39" r="5" fill="#C7D2FE"/>
-  <rect x="36" y="36" width="24" height="6" rx="3" fill="#FFFFFF" fill-opacity="0.9"/>
+  <!-- 上タブ (Tab 1: ロイヤルインディゴ) -->
+  <rect x="15" y="24" width="46" height="34" rx="7" fill="url(#tabGrad1)"/>
+  <circle cx="23" cy="36" r="5" fill="#E0E7FF"/>
+  <rect x="37" y="38" width="16" height="6" rx="3" fill="#FFFFFF" fill-opacity="0.95"/>
 
-  <!-- 下タブ (Tab 2) -->
-  <rect x="16" y="72" width="56" height="34" rx="7" fill="url(#tabGrad2)"/>
-  <circle cx="25" cy="89" r="5" fill="#BAE6FD"/>
-  <rect x="36" y="86" width="24" height="6" rx="3" fill="#FFFFFF" fill-opacity="0.9"/>
+  <!-- 下タブ (Tab 2: スカイブルー) -->
+  <rect x="15" y="70" width="46" height="34" rx="7" fill="url(#tabGrad2)"/>
+  <circle cx="23" cy="82" r="5" fill="#E0F2FE"/>
+  <rect x="37" y="84" width="16" height="6" rx="3" fill="#FFFFFF" fill-opacity="0.95"/>
 
-  <!-- ソート矢印群 -->
-  <!-- 昇順矢印 (上向き・エメラルドグリーン) -->
-  <g stroke="#34D399" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round">
-    <line x1="87" y1="68" x2="87" y2="26"/>
-    <polyline points="78.5,34.5 87,26 95.5,34.5"/>
-  </g>
+  <!-- 強調された位置入れ替え（スワップ・ソート）矢印 -->
+  <!-- 昇順矢印 (緑: 下から上へカーブして相手の位置へ昇る) -->
+  <path d="M 98 86 C 86 86, 77 68, 77 38" fill="none" stroke="#10B981" stroke-width="7" stroke-linecap="round"/>
+  <polygon points="77,25 67.5,37 86.5,37" fill="#10B981"/>
 
-  <!-- 降順矢印 (下向き・アンバーイエロー) -->
-  <g stroke="#FBBF24" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round">
-    <line x1="107" y1="60" x2="107" y2="102"/>
-    <polyline points="98.5,93.5 107,102 115.5,93.5"/>
-  </g>
+  <!-- 降順矢印 (オレンジ: 上から下へカーブして相手の位置へ降りる) -->
+  <path d="M 83 42 C 95 42, 104 60, 104 90" fill="none" stroke="#EA580C" stroke-width="7" stroke-linecap="round"/>
+  <polygon points="104,103 94.5,91 113.5,91" fill="#EA580C"/>
 </svg>

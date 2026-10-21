@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Tab Sorter",
+  "name": "Tab Sorter for Chromium",
   "version": "1.1.0",
   "description": "タブとタブグループをタイトルまたはURLで自然順・全角英数対応で整然とソートする拡張機能。ショートカットキー・オプション設定対応。",
   "permissions": [
@@ -10,7 +10,7 @@
     "storage"
   ],
   "action": {
-    "default_title": "タブをソート（右クリックでメニュー・オプション）",
+    "default_title": "タブをURL昇順ソート（右クリックでメニュー・オプション）",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",
