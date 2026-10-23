@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tab Sorter for Chromium",
-  "version": "1.1.0",
+  "version": "1.2.1",
   "description": "タブとタブグループをタイトルまたはURLで自然順・全角英数対応で整然とソートする拡張機能。ショートカットキー・オプション設定対応。",
   "permissions": [
     "tabs",

@@ -7,9 +7,10 @@
  * 2. 「タイトル順」および「URL順（ドメイン階層優先）」の両対応
  * 3. 自然順ソート（例: 1, 2, 10）および全角英数字の正規化対応（例: １, ２, Ａ）
  * 4. タブグループの所属構造を完全維持し、グループ外タブの後ろ（ウィンドウ末尾）に整列
- * 5. キーボードショートカット（manifest commands）の受信と即時実行
- * 6. ユーザー設定（ストレージ）に応じた柔軟なデフォルト挙動
- * 7. 外部ライブラリ依存ゼロ（Vanilla JS）＆ 最小権限で安全な設計
+ * 5. 同一ドメインの未所属タブを自動でタブグループ化（右クリックメニュー対応）
+ * 6. キーボードショートカット（manifest commands）の受信と即時実行
+ * 7. ユーザー設定（ストレージ）に応じた柔軟なデフォルト挙動
+ * 8. 外部ライブラリ依存ゼロ（Vanilla JS）＆ 最小権限で安全な設計
  */
 
 // =============================================================================
@@ -372,8 +373,216 @@ async function sortTabsInCurrentWindow({ sortBy = 'title', descending = false } 
 }
 
 // =============================================================================
+// 同一ドメインでのタブグループ自動作成エンジン
+// =============================================================================
+
+/**
+ * 現在アクティブなウィンドウ内の未所属タブを同一ドメインごとに自動でタブグループ化します。
+ * 
+ * 【動作仕様】
+ * 1. どのタブグループにも所属していないタブ（かつピン留めされていないタブ）のみを対象とする
+ * 2. 同一ドメインのタブが2つ以上存在する場合のみグループを作成する（1タブのみはグループ化せずそのまま残す）
+ * 3. タブグループの位置は、そのタブグループに所属するタブの中で一番先頭（最小インデックス）にあったものの位置とする
+ * 4. タブグループ内の並びは機能を実行する前の並びのままとする
+ * 5. タブグループ名はドメイン名（'www.' を除いたホスト名）とする
+ */
+async function groupTabsByDomainInCurrentWindow() {
+  if (isSorting) {
+    return;
+  }
+  isSorting = true;
+
+  try {
+    await chrome.action.setBadgeText({ text: '...' });
+    await chrome.action.setBadgeBackgroundColor({ color: '#6366F1' });
+
+    // tabGroups API が利用可能かチェック
+    if (!chrome.tabGroups || !chrome.tabs.group) {
+      console.warn('Tab Sorter: お使いのブラウザはタブグループAPIに対応していません。');
+      showBadgeMessage('N/A', '#EF4444', 'タブグループAPI非対応');
+      return;
+    }
+
+    const tabs = await chrome.tabs.query({ currentWindow: true });
+    if (!tabs || tabs.length <= 1) {
+      showBadgeMessage('0GRP', '#10B981', '対象となるタブがありません');
+      return;
+    }
+
+    const TAB_GROUP_NONE = (chrome.tabGroups && chrome.tabGroups.TAB_GROUP_ID_NONE) !== undefined
+      ? chrome.tabGroups.TAB_GROUP_ID_NONE
+      : -1;
+
+    // どのタブグループにも所属していないタブのみを判定
+    function isUngrouped(t) {
+      return !t.pinned && (t.groupId === undefined || t.groupId === null || t.groupId === TAB_GROUP_NONE || t.groupId < 0);
+    }
+
+    // 1. 未所属タブをドメインごとに集約（元の並び順を維持）
+    const domainTabsMap = new Map();
+    for (const tab of tabs) {
+      if (isUngrouped(tab)) {
+        const domain = parseUrlForSort(tab.url).host;
+        if (domain) {
+          if (!domainTabsMap.has(domain)) {
+            domainTabsMap.set(domain, []);
+          }
+          domainTabsMap.get(domain).push(tab);
+        }
+      }
+    }
+
+    // 2. 2つ以上のタブがあるドメインのみをグループ化対象とする
+    const targetDomainMap = new Map();
+    for (const [domain, dTabs] of domainTabsMap.entries()) {
+      if (dTabs.length >= 2) {
+        targetDomainMap.set(domain, dTabs);
+      }
+    }
+
+    if (targetDomainMap.size === 0) {
+      showBadgeMessage('0GRP', '#10B981', 'グループ化対象の同一ドメインタブがありません');
+      return;
+    }
+
+    // 3. 理想の最終並び順 (finalTabs) および作成するグループの情報を構築
+    // 各タブを走査し、グループ化対象ドメインの最初のタブに遭遇した位置へそのドメインの全タブを配置
+    const groupsToCreate = [];
+    const handledDomains = new Set();
+    const finalTabs = [];
+
+    for (const tab of tabs) {
+      if (isUngrouped(tab)) {
+        const domain = parseUrlForSort(tab.url).host;
+        if (targetDomainMap.has(domain)) {
+          if (!handledDomains.has(domain)) {
+            handledDomains.add(domain);
+            const dTabs = targetDomainMap.get(domain);
+            groupsToCreate.push({
+              domain,
+              tabs: dTabs,
+              firstIndex: tab.index
+            });
+            for (const dt of dTabs) {
+              finalTabs.push(dt);
+            }
+          }
+          // 後続の同一ドメインタブはスキップ（既に dTabs で配置済み）
+          continue;
+        }
+      }
+      finalTabs.push(tab);
+    }
+
+    // 4. 新規タブグループの作成とタイトル設定
+    const tabToGroupIdMap = new Map();
+    for (const g of groupsToCreate) {
+      try {
+        const tabIds = g.tabs.map(t => t.id);
+        const groupId = await chrome.tabs.group({ tabIds });
+        await chrome.tabGroups.update(groupId, { title: g.domain });
+        for (const t of g.tabs) {
+          tabToGroupIdMap.set(t.id, groupId);
+        }
+      } catch (err) {
+        console.warn(`ドメイン ${g.domain} のグループ作成に失敗:`, err);
+      }
+    }
+
+    // 5. finalTabs をアイテム（新規/既存グループまたは単独タブ）ごとにまとめて左から順に整列
+    const items = [];
+    let currentItem = null;
+
+    for (const tab of finalTabs) {
+      const gId = tabToGroupIdMap.has(tab.id) ? tabToGroupIdMap.get(tab.id) : tab.groupId;
+      const isGrouped = gId !== undefined && gId !== null && gId !== TAB_GROUP_NONE && gId >= 0;
+
+      if (isGrouped) {
+        if (!currentItem || currentItem.type !== 'group' || currentItem.groupId !== gId) {
+          currentItem = { type: 'group', groupId: gId, tabIds: [tab.id] };
+          items.push(currentItem);
+        } else {
+          currentItem.tabIds.push(tab.id);
+        }
+      } else {
+        currentItem = { type: 'tab', tabId: tab.id, tabIds: [tab.id] };
+        items.push(currentItem);
+      }
+    }
+
+    // 左から順に確定位置へ移動
+    let currentIndex = 0;
+    for (const item of items) {
+      try {
+        if (item.type === 'group') {
+          await chrome.tabGroups.move(item.groupId, { index: currentIndex });
+          currentIndex += item.tabIds.length;
+        } else {
+          await chrome.tabs.move(item.tabId, { index: currentIndex });
+          currentIndex += 1;
+        }
+      } catch (moveErr) {
+        console.warn(`アイテム移動エラー:`, moveErr);
+      }
+    }
+
+    // 6. 各グループ内の並び順が元通りの順序になっているか確認・担保
+    for (const g of groupsToCreate) {
+      const gId = tabToGroupIdMap.get(g.tabs[0].id);
+      if (!gId) continue;
+      try {
+        const currentGTabs = await chrome.tabs.query({ windowId: tabs[0].windowId, groupId: gId });
+        if (currentGTabs && currentGTabs.length > 1) {
+          const startIndex = Math.min(...currentGTabs.map(t => t.index));
+          for (let i = 0; i < g.tabs.length; i++) {
+            await chrome.tabs.move(g.tabs[i].id, { index: startIndex + i });
+          }
+        }
+      } catch (innerErr) {
+        console.warn(`グループ内タブ並び調整エラー:`, innerErr);
+      }
+    }
+
+    // 完了フィードバック
+    const groupCount = groupsToCreate.length;
+    showBadgeMessage(`${groupCount}GRP`, '#10B981', `同一ドメインで ${groupCount} 個のタブグループを作成完了`);
+
+  } catch (error) {
+    console.error('Tab Sorter グループ作成エラー:', error);
+    try {
+      await chrome.action.setBadgeText({ text: 'ERR' });
+      await chrome.action.setBadgeBackgroundColor({ color: '#EF4444' });
+      setTimeout(() => chrome.action.setBadgeText({ text: '' }), 1500);
+    } catch {}
+  } finally {
+    isSorting = false;
+  }
+}
+
+// =============================================================================
 // バッジフィードバック表示
 // =============================================================================
+
+/**
+ * ツールバーアイコンに一時的なバッジとツールチップを表示します。
+ * 
+ * @param {string} badgeText 
+ * @param {string} badgeColor 
+ * @param {string} titleText 
+ */
+function showBadgeMessage(badgeText, badgeColor, titleText) {
+  chrome.action.setBadgeText({ text: badgeText });
+  chrome.action.setBadgeBackgroundColor({ color: badgeColor });
+  chrome.action.setTitle({ title: `Tab Sorter: ${titleText}` });
+
+  // 1.5秒後にバッジを消去し、デフォルトのツールチップに戻す
+  setTimeout(() => {
+    chrome.action.setBadgeText({ text: '' });
+    chrome.action.setTitle({
+      title: 'タブをソート（右クリックでメニュー・オプション）'
+    });
+  }, 1500);
+}
 
 /**
  * ソート完了時にツールバーアイコンに視覚的フィードバック（バッジおよびツールチップ）を表示します。
@@ -392,23 +601,10 @@ function showBadgeFeedback(sortBy, descending) {
   // バッジ背景色: 昇順はエメラルドグリーン (#10B981)、降順はアンバーオレンジ (#F59E0B)
   const badgeColor = descending ? '#F59E0B' : '#10B981';
 
-  chrome.action.setBadgeText({ text: badgeText });
-  chrome.action.setBadgeBackgroundColor({ color: badgeColor });
-
   const typeName = isUrl ? 'URL' : 'タイトル';
   const orderName = descending ? '降順' : '昇順';
 
-  chrome.action.setTitle({
-    title: `Tab Sorter: ${typeName}【${orderName}】で整列完了`
-  });
-
-  // 1.5秒後にバッジを消去し、デフォルトのツールチップに戻す
-  setTimeout(() => {
-    chrome.action.setBadgeText({ text: '' });
-    chrome.action.setTitle({
-      title: 'タブをソート（右クリックでメニュー・オプション）'
-    });
-  }, 1500);
+  showBadgeMessage(badgeText, badgeColor, `${typeName}【${orderName}】で整列完了`);
 }
 
 // =============================================================================
@@ -457,62 +653,81 @@ chrome.commands.onCommand.addListener(async (command) => {
 
 /**
  * 3. 右クリックコンテキストメニューの生成
+ * 
+ * 【重要: Chromium 仕様 (ACTION_MENU_TOP_LEVEL_LIMIT)】
+ * 拡張機能のアクションアイコン（contexts: ['action']）の右クリックメニューには、
+ * ブラウザ側の仕様として最大 6 個までしかトップレベル項目を配置できません。
+ * （区切り線 separator も 1 つの項目としてカウントされます）
+ * 6 個を超えた項目は Chrome により無視（非表示）されるため、
+ * ここでは厳密に 6 個以内で直感的な構成に整えています。
+ * （※設定画面はChromeが右クリックメニューに「オプション」として自動生成するため自前追加は不要）
  */
-function setupContextMenus() {
-  chrome.contextMenus.removeAll(() => {
-    // タイトルソート
-    chrome.contextMenus.create({
-      id: 'sort_title_asc',
-      title: 'タイトル昇順でソート (A → Z, 1 → 9)',
-      contexts: ['action']
-    });
-    chrome.contextMenus.create({
-      id: 'sort_title_desc',
-      title: 'タイトル降順でソート (Z → A, 9 → 1)',
-      contexts: ['action']
-    });
+async function setupContextMenus() {
+  try {
+    // 既存のコンテキストメニューを一旦クリア
+    if (chrome.contextMenus && chrome.contextMenus.removeAll) {
+      await chrome.contextMenus.removeAll();
+    }
 
-    // 区切り線 1
-    chrome.contextMenus.create({
-      id: 'sep_url',
-      type: 'separator',
-      contexts: ['action']
-    });
+    // トップレベル最大6項目（ソート4種 + 区切り線 + 同一ドメイングループ作成）
+    const menuItems = [
+      // 1. タイトル昇順ソート
+      {
+        id: 'sort_title_asc',
+        title: 'タイトル昇順でソート (A → Z, 1 → 9)',
+        contexts: ['action']
+      },
+      // 2. タイトル降順ソート
+      {
+        id: 'sort_title_desc',
+        title: 'タイトル降順でソート (Z → A, 9 → 1)',
+        contexts: ['action']
+      },
+      // 3. URL昇順ソート
+      {
+        id: 'sort_url_asc',
+        title: 'URL昇順でソート (ドメイン・パス順)',
+        contexts: ['action']
+      },
+      // 4. URL降順ソート
+      {
+        id: 'sort_url_desc',
+        title: 'URL降順でソート (ドメイン・パス順)',
+        contexts: ['action']
+      },
+      // 5. 区切り線（ソート操作とグループ化操作の境界）
+      {
+        id: 'sep_group',
+        type: 'separator',
+        contexts: ['action']
+      },
+      // 6. 同一ドメインでタブグループ作成
+      {
+        id: 'group_by_domain',
+        title: '同一ドメインでタブグループを作成',
+        contexts: ['action']
+      }
+    ];
 
-    // URLソート
-    chrome.contextMenus.create({
-      id: 'sort_url_asc',
-      title: 'URL昇順でソート (ドメイン・パス順)',
-      contexts: ['action']
-    });
-    chrome.contextMenus.create({
-      id: 'sort_url_desc',
-      title: 'URL降順でソート (ドメイン・パス順)',
-      contexts: ['action']
-    });
-
-    // 区切り線 2
-    chrome.contextMenus.create({
-      id: 'sep_options',
-      type: 'separator',
-      contexts: ['action']
-    });
-
-    // 設定画面を開く
-    chrome.contextMenus.create({
-      id: 'open_options',
-      title: '設定・ショートカット変更...',
-      contexts: ['action']
-    });
-  });
+    for (const item of menuItems) {
+      chrome.contextMenus.create(item, () => {
+        if (chrome.runtime.lastError) {
+          // 重複等の警告を安全に無視
+          void chrome.runtime.lastError;
+        }
+      });
+    }
+  } catch (error) {
+    console.warn('Tab Sorter: コンテキストメニューのセットアップ中にエラー:', error);
+  }
 }
 
-// 拡張機能インストールまたはアップデート時
+// 拡張機能インストールまたはアップデート・再読み込み時
 chrome.runtime.onInstalled.addListener(() => {
   setupContextMenus();
 });
 
-// ブラウザ起動時
+// ブラウザ起動時にも最新のメニュー状態を担保
 chrome.runtime.onStartup.addListener(() => {
   setupContextMenus();
 });
@@ -533,6 +748,9 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
       break;
     case 'sort_url_desc':
       await sortTabsInCurrentWindow({ sortBy: 'url', descending: true });
+      break;
+    case 'group_by_domain':
+      await groupTabsByDomainInCurrentWindow();
       break;
     case 'open_options':
       // 設定画面（options_ui）を開く

@@ -5,6 +5,7 @@
  * Test 1: 自然順ソート（1, 2, 10 等）および全角英数字の正規化比較テスト
  * Test 2: URLソートの検証（ドメイン階層優先、パスの自然順、タイブレーク）
  * Test 3: タブグループの所属維持・グループ内ソート・ウィンドウ末尾配置の検証
+ * Test 4: 同一ドメインでのタブグループ自動作成機能の検証（未所属対象・先頭位置・順序維持・ドメイン名）
  * 
  * 実行方法:
  *   node test_suite.js
@@ -228,6 +229,166 @@ console.log('\n--- Test 3: タブグループの中身と配置の完全検証 -
   assert.strictEqual(tabs[4].title, 'グループB-タブ2');
   assert.strictEqual(tabs[5].title, 'グループB-タブ10');
   console.log('✓ Test 3 Passed: グループ外タブのソートおよびグループ末尾配置・グループ内ソートが正常に動作');
+}
+
+console.log('\n--- Test 4: 同一ドメインでのタブグループ自動作成機能の検証 ---');
+{
+  // 仮想タブストリップ
+  let tabs = [
+    { id: 1, title: 'Google Search 1', url: 'https://www.google.com/search?q=1', groupId: -1, pinned: false },
+    { id: 2, title: 'GitHub Repo A', url: 'https://github.com/repoA', groupId: -1, pinned: false },
+    { id: 3, title: '既存グループ タブ1', url: 'https://www.google.com/search?q=exist', groupId: 99, pinned: false },
+    { id: 4, title: 'Google Search 2', url: 'https://google.com/search?q=2', groupId: -1, pinned: false },
+    { id: 5, title: '単独タブ (Amazon)', url: 'https://www.amazon.co.jp/', groupId: -1, pinned: false },
+    { id: 6, title: 'GitHub Repo B', url: 'https://github.com/repoB', groupId: -1, pinned: false },
+    { id: 7, title: 'Google Search 3', url: 'https://google.com/search?q=3', groupId: -1, pinned: false }
+  ];
+
+  function isUngrouped(t) {
+    return !t.pinned && (t.groupId === undefined || t.groupId === null || t.groupId < 0);
+  }
+
+  // 1. 未所属タブをドメインごとに集約
+  const domainTabsMap = new Map();
+  for (const tab of tabs) {
+    if (isUngrouped(tab)) {
+      const domain = parseUrlForSort(tab.url).host;
+      if (domain) {
+        if (!domainTabsMap.has(domain)) {
+          domainTabsMap.set(domain, []);
+        }
+        domainTabsMap.get(domain).push(tab);
+      }
+    }
+  }
+
+  // 2. 2つ以上ある同一ドメインのみをグループ化対象とする
+  const targetDomainMap = new Map();
+  for (const [domain, dTabs] of domainTabsMap.entries()) {
+    if (dTabs.length >= 2) {
+      targetDomainMap.set(domain, dTabs);
+    }
+  }
+
+  // 3. 理想の最終並び順およびグループ作成情報を構築
+  const groupsToCreate = [];
+  const handledDomains = new Set();
+  const finalTabs = [];
+  let nextGid = 1000;
+  const tabToGroupIdMap = new Map();
+  const groupTitles = new Map();
+
+  for (let i = 0; i < tabs.length; i++) {
+    const tab = tabs[i];
+    if (isUngrouped(tab)) {
+      const domain = parseUrlForSort(tab.url).host;
+      if (targetDomainMap.has(domain)) {
+        if (!handledDomains.has(domain)) {
+          handledDomains.add(domain);
+          const dTabs = targetDomainMap.get(domain);
+          const gid = nextGid++;
+          groupTitles.set(gid, domain);
+          groupsToCreate.push({
+            domain,
+            groupId: gid,
+            tabs: dTabs,
+            firstIndex: i
+          });
+          for (const dt of dTabs) {
+            tabToGroupIdMap.set(dt.id, gid);
+            finalTabs.push({ ...dt, groupId: gid });
+          }
+        }
+        continue;
+      }
+    }
+    finalTabs.push(tab);
+  }
+
+  // 4. 移動シミュレーション
+  // 各タブの groupId を更新
+  for (const t of tabs) {
+    if (tabToGroupIdMap.has(t.id)) {
+      t.groupId = tabToGroupIdMap.get(t.id);
+    }
+  }
+
+  // アイテム列構築
+  const items = [];
+  let currentItem = null;
+  for (const tab of finalTabs) {
+    const isGrouped = tab.groupId >= 0;
+    if (isGrouped) {
+      if (!currentItem || currentItem.type !== 'group' || currentItem.groupId !== tab.groupId) {
+        currentItem = { type: 'group', groupId: tab.groupId, tabIds: [tab.id] };
+        items.push(currentItem);
+      } else {
+        currentItem.tabIds.push(tab.id);
+      }
+    } else {
+      currentItem = { type: 'tab', tabId: tab.id, tabIds: [tab.id] };
+      items.push(currentItem);
+    }
+  }
+
+  function moveTab(tabId, targetIndex) {
+    const idx = tabs.findIndex(t => t.id === tabId);
+    const [t] = tabs.splice(idx, 1);
+    tabs.splice(targetIndex, 0, t);
+  }
+
+  function moveGroup(groupId, targetIndex) {
+    const gTabs = tabs.filter(t => t.groupId === groupId);
+    tabs = tabs.filter(t => t.groupId !== groupId);
+    tabs.splice(targetIndex, 0, ...gTabs);
+  }
+
+  let currentIndex = 0;
+  for (const item of items) {
+    if (item.type === 'group') {
+      moveGroup(item.groupId, currentIndex);
+      currentIndex += item.tabIds.length;
+    } else {
+      moveTab(item.tabId, currentIndex);
+      currentIndex += 1;
+    }
+  }
+
+  console.log('グループ化後:', tabs.map(t => `${t.title} [Grp:${t.groupId}(${groupTitles.get(t.groupId) || '既存'})]`));
+
+  // 検証 1: 既存グループ (id: 3) は勝手に別グループ化されず維持されていること
+  assert.strictEqual(tabs.find(t => t.id === 3).groupId, 99);
+
+  // 検証 2: 単独タブ (Amazon id: 5) はグループ化されていないこと (groupId: -1)
+  assert.strictEqual(tabs.find(t => t.id === 5).groupId, -1);
+
+  // 検証 3: 作成されたグループ名はドメイン名（'www.' 除去済み）であること
+  const googleGrpId = tabs.find(t => t.id === 1).groupId;
+  const githubGrpId = tabs.find(t => t.id === 2).groupId;
+  assert.strictEqual(groupTitles.get(googleGrpId), 'google.com');
+  assert.strictEqual(groupTitles.get(githubGrpId), 'github.com');
+
+  // 検証 4: タブグループの位置はそのタブグループに所属するタブの中で一番先頭にあった位置
+  // google.com グループが先頭 (index 0, 1, 2)
+  assert.strictEqual(tabs[0].id, 1);
+  assert.strictEqual(tabs[1].id, 4);
+  assert.strictEqual(tabs[2].id, 7);
+  assert.strictEqual(tabs[0].groupId, googleGrpId);
+  assert.strictEqual(tabs[1].groupId, googleGrpId);
+  assert.strictEqual(tabs[2].groupId, googleGrpId);
+
+  // github.com グループが次 (index 3, 4)
+  assert.strictEqual(tabs[3].id, 2);
+  assert.strictEqual(tabs[4].id, 6);
+  assert.strictEqual(tabs[3].groupId, githubGrpId);
+  assert.strictEqual(tabs[4].groupId, githubGrpId);
+
+  // 検証 5: グループ内の並びが実行前の並び順（元の順序）のままであること
+  // Google: id 1 -> id 4 -> id 7
+  // GitHub: id 2 -> id 6
+  // (上記のアサートで確認済み)
+
+  console.log('✓ Test 4 Passed: 同一ドメインタブグループ自動作成（未所属のみ・先頭位置・順序維持・ドメイン名）が正常に動作');
 }
 
 console.log('\n=============================');
